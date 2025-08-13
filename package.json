@@ -1,0 +1,28 @@
+{
+  "name": "outreach-tool",
+  "version": "0.1.0",
+  "description": "Outreach Tool API v0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "render-build": "npm install"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "outreach",
+    "api",
+    "express",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT"
+}
