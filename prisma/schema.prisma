@@ -17,7 +17,7 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  
   // Relationships
   campaigns Campaign[]
   
@@ -37,11 +37,12 @@ model Lead {
   status      LeadStatus @default(NEW)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  
   // Relationships
   campaignLeads CampaignLead[]
   sendEvents    SendEvent[]
-
+  suppressions  Suppression[]
+  
   @@map("leads")
 }
 
@@ -55,15 +56,15 @@ model Campaign {
   updatedAt   DateTime @updatedAt
   startDate   DateTime?
   endDate     DateTime?
-
+  
   // Foreign Keys
   userId      Int
-
+  
   // Relationships
   user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
   steps         CampaignStep[]
   campaignLeads CampaignLead[]
-
+  
   @@map("campaigns")
 }
 
@@ -79,14 +80,14 @@ model CampaignStep {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  
   // Foreign Keys
   campaignId  Int
-
+  
   // Relationships
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   sendEvents  SendEvent[]
-
+  
   @@unique([campaignId, stepNumber])
   @@map("campaign_steps")
 }
@@ -99,16 +100,16 @@ model CampaignLead {
   enrolledAt  DateTime @default(now())
   completedAt DateTime?
   updatedAt   DateTime @updatedAt
-
+  
   // Foreign Keys
   campaignId  Int
   leadId      Int
-
+  
   // Relationships
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   lead        Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   sendEvents  SendEvent[]
-
+  
   @@unique([campaignId, leadId])
   @@map("campaign_leads")
 }
@@ -125,18 +126,36 @@ model SendEvent {
   bouncedAt     DateTime?
   errorMessage  String?
   metadata      Json?
-
+  
   // Foreign Keys
   leadId        Int
   campaignLeadId Int
   campaignStepId Int
-
+  
   // Relationships
   lead          Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   campaignLead  CampaignLead @relation(fields: [campaignLeadId], references: [id], onDelete: Cascade)
   campaignStep  CampaignStep @relation(fields: [campaignStepId], references: [id], onDelete: Cascade)
-
+  
   @@map("send_events")
+}
+
+// Suppression model for managing unsubscribed leads
+model Suppression {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  reason      SuppressionReason @default(UNSUBSCRIBED)
+  source      String?  // Source of suppression (campaign name, manual, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Foreign Keys
+  leadId      Int?
+  
+  // Relationships
+  lead        Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  @@map("suppressions")
 }
 
 // Enums
@@ -181,4 +200,11 @@ enum SendEventType {
   REPLIED
   BOUNCED
   FAILED
+}
+
+enum SuppressionReason {
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+  MANUAL
 }
