@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and user management
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  campaigns Campaign[]
+  
+  @@map("users")
+}
+
+// Lead model for managing potential customers
+model Lead {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  firstName   String?
+  lastName    String?
+  company     String?
+  position    String?
+  linkedinUrl String?
+  notes       String?
+  status      LeadStatus @default(NEW)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  campaignLeads CampaignLead[]
+  sendEvents    SendEvent[]
+
+  @@map("leads")
+}
+
+// Campaign model for outreach campaigns
+model Campaign {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  status      CampaignStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  startDate   DateTime?
+  endDate     DateTime?
+
+  // Foreign Keys
+  userId      Int
+
+  // Relationships
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps         CampaignStep[]
+  campaignLeads CampaignLead[]
+
+  @@map("campaigns")
+}
+
+// CampaignStep model for defining campaign sequences
+model CampaignStep {
+  id          Int      @id @default(autoincrement())
+  stepNumber  Int
+  name        String
+  subject     String?
+  content     String
+  delayDays   Int      @default(0)
+  stepType    StepType @default(EMAIL)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Foreign Keys
+  campaignId  Int
+
+  // Relationships
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  sendEvents  SendEvent[]
+
+  @@unique([campaignId, stepNumber])
+  @@map("campaign_steps")
+}
+
+// CampaignLead model for managing leads in campaigns
+model CampaignLead {
+  id          Int      @id @default(autoincrement())
+  status      CampaignLeadStatus @default(PENDING)
+  currentStep Int      @default(1)
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime @updatedAt
+
+  // Foreign Keys
+  campaignId  Int
+  leadId      Int
+
+  // Relationships
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead        Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sendEvents  SendEvent[]
+
+  @@unique([campaignId, leadId])
+  @@map("campaign_leads")
+}
+
+// SendEvent model for tracking email sends and responses
+model SendEvent {
+  id            Int      @id @default(autoincrement())
+  eventType     SendEventType @default(SENT)
+  sentAt        DateTime @default(now())
+  deliveredAt   DateTime?
+  openedAt      DateTime?
+  clickedAt     DateTime?
+  repliedAt     DateTime?
+  bouncedAt     DateTime?
+  errorMessage  String?
+  metadata      Json?
+
+  // Foreign Keys
+  leadId        Int
+  campaignLeadId Int
+  campaignStepId Int
+
+  // Relationships
+  lead          Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaignLead  CampaignLead @relation(fields: [campaignLeadId], references: [id], onDelete: Cascade)
+  campaignStep  CampaignStep @relation(fields: [campaignStepId], references: [id], onDelete: Cascade)
+
+  @@map("send_events")
+}
+
+// Enums
+enum LeadStatus {
+  NEW
+  CONTACTED
+  RESPONDED
+  QUALIFIED
+  UNQUALIFIED
+  BOUNCED
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum StepType {
+  EMAIL
+  LINKEDIN
+  CALL
+  TASK
+}
+
+enum CampaignLeadStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  PAUSED
+  FAILED
+  UNSUBSCRIBED
+}
+
+enum SendEventType {
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  REPLIED
+  BOUNCED
+  FAILED
+}
